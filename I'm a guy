@@ -1,0 +1,577 @@
+-- Ultimate FE Animation Studio (Direct Preset View & Clean UI)
+-- Lightweight, Native UI & Smooth Execution
+
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+
+local LocalPlayer = Players.LocalPlayer
+local parent = (gethui and gethui()) or CoreGui
+
+if parent:FindFirstChild("UltimateAnimStudio") then
+    parent.UltimateAnimStudio:Destroy()
+end
+
+local FILE_NAME = "UltimateAnimStudio_Config.json"
+
+local SavedData = {
+    ActivePreset = nil,
+    Presets = {}
+}
+
+local function loadSavedData()
+    if readfile and isfile and isfile(FILE_NAME) then
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(readfile(FILE_NAME))
+        end)
+        if success and type(result) == "table" then
+            SavedData = result
+        end
+    end
+end
+
+local function saveDataToFile()
+    if writefile then
+        pcall(function()
+            writefile(FILE_NAME, HttpService:JSONEncode(SavedData))
+        end)
+    end
+end
+
+loadSavedData()
+
+-- UI Root
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "UltimateAnimStudio"
+ScreenGui.Parent = parent
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(16, 17, 22)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -260)
+MainFrame.Size = UDim2.new(0, 500, 0, 520)
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Parent = MainFrame
+MainStroke.Color = Color3.fromRGB(45, 48, 65)
+MainStroke.Thickness = 1.2
+
+-- FLOATING LOGO SPAWN (MINIMIZE ICON)
+local MinimizeIcon = Instance.new("TextButton")
+MinimizeIcon.Name = "MinimizeIcon"
+MinimizeIcon.Parent = ScreenGui
+MinimizeIcon.BackgroundColor3 = Color3.fromRGB(24, 26, 35)
+MinimizeIcon.BorderSizePixel = 0
+MinimizeIcon.Position = UDim2.new(0.1, 0, 0.2, 0)
+MinimizeIcon.Size = UDim2.new(0, 50, 0, 50)
+MinimizeIcon.Font = Enum.Font.GothamBold
+MinimizeIcon.Text = "🌀"
+MinimizeIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeIcon.TextSize = 24
+MinimizeIcon.Visible = false
+MinimizeIcon.ZIndex = 100
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(1, 0)
+IconCorner.Parent = MinimizeIcon
+
+local IconStroke = Instance.new("UIStroke")
+IconStroke.Parent = MinimizeIcon
+IconStroke.Color = Color3.fromRGB(0, 132, 255)
+IconStroke.Thickness = 2
+
+-- Toast Notification System
+local function showToast(message, isSuccess)
+    local Toast = Instance.new("Frame")
+    Toast.Parent = ScreenGui
+    Toast.BackgroundColor3 = isSuccess and Color3.fromRGB(0, 175, 100) or Color3.fromRGB(220, 60, 60)
+    Toast.Position = UDim2.new(0.5, -130, 0, -40)
+    Toast.Size = UDim2.new(0, 260, 0, 36)
+    Toast.ZIndex = 150
+
+    local TCorner = Instance.new("UICorner")
+    TCorner.CornerRadius = UDim.new(0, 6)
+    TCorner.Parent = Toast
+
+    local TText = Instance.new("TextLabel")
+    TText.Parent = Toast
+    TText.BackgroundTransparency = 1
+    TText.Size = UDim2.new(1, 0, 1, 0)
+    TText.Font = Enum.Font.GothamBold
+    TText.Text = message
+    TText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TText.TextSize = 12
+
+    Toast:TweenPosition(UDim2.new(0.5, -130, 0, 15), Enum.EasingDirection.Out, Enum.EasingStyle.Back, 0.3, true)
+
+    task.delay(2.2, function()
+        if Toast and Toast.Parent then
+            Toast:TweenPosition(UDim2.new(0.5, -130, 0, -50), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.3, true)
+            task.wait(0.3)
+            Toast:Destroy()
+        end
+    end)
+end
+
+-- Header Bar
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Parent = MainFrame
+TopBar.BackgroundColor3 = Color3.fromRGB(22, 24, 32)
+TopBar.BorderSizePixel = 0
+TopBar.Size = UDim2.new(1, 0, 0, 42)
+
+local TopCorner = Instance.new("UICorner")
+TopCorner.CornerRadius = UDim.new(0, 12)
+TopCorner.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Parent = TopBar
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 14, 0, 0)
+Title.Size = UDim2.new(0, 260, 1, 0)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "⚡ Ultimate FE Animation Studio"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 13
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Parent = TopBar
+MinimizeBtn.BackgroundTransparency = 1
+MinimizeBtn.Position = UDim2.new(1, -68, 0, 6)
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Text = "─"
+MinimizeBtn.TextColor3 = Color3.fromRGB(180, 180, 195)
+MinimizeBtn.TextSize = 14
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Parent = TopBar
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Position = UDim2.new(1, -38, 0, 6)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(180, 180, 195)
+CloseBtn.TextSize = 14
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    MinimizeIcon.Visible = true
+end)
+
+MinimizeIcon.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    MinimizeIcon.Visible = false
+end)
+
+-- Nav Tabs
+local NavFrame = Instance.new("Frame")
+NavFrame.Parent = MainFrame
+NavFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 32)
+NavFrame.BorderSizePixel = 0
+NavFrame.Position = UDim2.new(0, 14, 0, 52)
+NavFrame.Size = UDim2.new(1, -28, 0, 36)
+
+local NavCorner = Instance.new("UICorner")
+NavCorner.CornerRadius = UDim.new(0, 6)
+NavCorner.Parent = NavFrame
+
+local EditorTabBtn = Instance.new("TextButton")
+EditorTabBtn.Parent = NavFrame
+EditorTabBtn.BackgroundColor3 = Color3.fromRGB(0, 132, 255)
+EditorTabBtn.Size = UDim2.new(0.33, -2, 1, 0)
+EditorTabBtn.Font = Enum.Font.GothamBold
+EditorTabBtn.Text = "✏️ Editor"
+EditorTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+EditorTabBtn.TextSize = 11
+
+local EditorTabCorner = Instance.new("UICorner")
+EditorTabCorner.CornerRadius = UDim.new(0, 6)
+EditorTabCorner.Parent = EditorTabBtn
+
+local FolderTabBtn = Instance.new("TextButton")
+FolderTabBtn.Parent = NavFrame
+FolderTabBtn.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
+FolderTabBtn.Position = UDim2.new(0.33, 2, 0, 0)
+FolderTabBtn.Size = UDim2.new(0.33, -2, 1, 0)
+FolderTabBtn.Font = Enum.Font.GothamBold
+FolderTabBtn.Text = "📁 Presets"
+FolderTabBtn.TextColor3 = Color3.fromRGB(150, 150, 170)
+FolderTabBtn.TextSize = 11
+
+local FolderTabCorner = Instance.new("UICorner")
+FolderTabCorner.CornerRadius = UDim.new(0, 6)
+FolderTabCorner.Parent = FolderTabBtn
+
+local BundleTabBtn = Instance.new("TextButton")
+BundleTabBtn.Parent = NavFrame
+BundleTabBtn.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
+BundleTabBtn.Position = UDim2.new(0.66, 2, 0, 0)
+BundleTabBtn.Size = UDim2.new(0.34, -2, 1, 0)
+BundleTabBtn.Font = Enum.Font.GothamBold
+BundleTabBtn.Text = "🎁 Show Bundle"
+BundleTabBtn.TextColor3 = Color3.fromRGB(150, 150, 170)
+BundleTabBtn.TextSize = 11
+
+local BundleTabCorner = Instance.new("UICorner")
+BundleTabCorner.CornerRadius = UDim.new(0, 6)
+BundleTabCorner.Parent = BundleTabBtn
+
+-- Containers
+local EditorContainer = Instance.new("Frame")
+EditorContainer.Parent = MainFrame
+EditorContainer.BackgroundTransparency = 1
+EditorContainer.Position = UDim2.new(0, 14, 0, 98)
+EditorContainer.Size = UDim2.new(1, -28, 0, 350)
+
+local FolderContainer = Instance.new("ScrollingFrame")
+FolderContainer.Parent = MainFrame
+FolderContainer.BackgroundTransparency = 1
+FolderContainer.Position = UDim2.new(0, 14, 0, 98)
+FolderContainer.Size = UDim2.new(1, -28, 0, 400)
+FolderContainer.Visible = false
+FolderContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+FolderContainer.ScrollBarThickness = 3
+
+local FolderLayout = Instance.new("UIListLayout")
+FolderLayout.Parent = FolderContainer
+FolderLayout.SortOrder = Enum.SortOrder.LayoutOrder
+FolderLayout.Padding = UDim.new(0, 8)
+
+FolderLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    FolderContainer.CanvasSize = UDim2.new(0, 0, 0, FolderLayout.AbsoluteContentSize.Y + 10)
+end)
+
+local BundleContainer = Instance.new("Frame")
+BundleContainer.Parent = MainFrame
+BundleContainer.BackgroundTransparency = 1
+BundleContainer.Position = UDim2.new(0, 14, 0, 98)
+BundleContainer.Size = UDim2.new(1, -28, 0, 400)
+BundleContainer.Visible = false
+
+-- 3D Viewport Preview
+local ViewportFrame = Instance.new("ViewportFrame")
+ViewportFrame.Parent = BundleContainer
+ViewportFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 32)
+ViewportFrame.Position = UDim2.new(0, 0, 0, 0)
+ViewportFrame.Size = UDim2.new(0, 150, 1, 0)
+
+local VPCorner = Instance.new("UICorner")
+VPCorner.CornerRadius = UDim.new(0, 8)
+VPCorner.Parent = ViewportFrame
+
+local BundleListScroll = Instance.new("ScrollingFrame")
+BundleListScroll.Parent = BundleContainer
+BundleListScroll.BackgroundTransparency = 1
+BundleListScroll.Position = UDim2.new(0, 160, 0, 0)
+BundleListScroll.Size = UDim2.new(1, -160, 1, 0)
+BundleListScroll.ScrollBarThickness = 3
+
+local BundleLayout = Instance.new("UIListLayout")
+BundleLayout.Parent = BundleListScroll
+BundleLayout.SortOrder = Enum.SortOrder.LayoutOrder
+BundleLayout.Padding = UDim.new(0, 8)
+
+BundleLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    BundleListScroll.CanvasSize = UDim2.new(0, 0, 0, BundleLayout.AbsoluteContentSize.Y + 10)
+end)
+
+-- 6 Input Fields
+local AnimInputs = {}
+local animList = {
+    {Name = "Idle", Key = "idle"},
+    {Name = "Walk", Key = "walk"},
+    {Name = "Run", Key = "run"},
+    {Name = "Jump", Key = "jump"},
+    {Name = "Swim", Key = "swim"},
+    {Name = "Swim Idle", Key = "swimidle"}
+}
+
+for i, anim in ipairs(animList) do
+    local InputFrame = Instance.new("Frame")
+    InputFrame.Parent = EditorContainer
+    InputFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 32)
+    InputFrame.Size = UDim2.new(1, 0, 0, 48)
+    InputFrame.Position = UDim2.new(0, 0, 0, (i - 1) * 54)
+
+    local IFCorner = Instance.new("UICorner")
+    IFCorner.CornerRadius = UDim.new(0, 6)
+    IFCorner.Parent = InputFrame
+
+    local Label = Instance.new("TextLabel")
+    Label.Parent = InputFrame
+    Label.BackgroundTransparency = 1
+    Label.Position = UDim2.new(0, 12, 0, 0)
+    Label.Size = UDim2.new(0, 100, 1, 0)
+    Label.Font = Enum.Font.GothamMedium
+    Label.Text = anim.Name
+    Label.TextColor3 = Color3.fromRGB(210, 210, 225)
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local Box = Instance.new("TextBox")
+    Box.Parent = InputFrame
+    Box.BackgroundColor3 = Color3.fromRGB(12, 13, 17)
+    Box.Position = UDim2.new(0, 115, 0, 8)
+    Box.Size = UDim2.new(1, -125, 1, -16)
+    Box.Font = Enum.Font.Code
+    Box.PlaceholderText = "ID Animasi..."
+    Box.Text = ""
+    Box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Box.TextSize = 12
+    Box.ClearTextOnFocus = false
+
+    local BoxCorner = Instance.new("UICorner")
+    BoxCorner.CornerRadius = UDim.new(0, 4)
+    BoxCorner.Parent = Box
+
+    AnimInputs[anim.Key] = Box
+end
+
+-- Action Buttons
+local ActionFrame = Instance.new("Frame")
+ActionFrame.Parent = MainFrame
+ActionFrame.BackgroundTransparency = 1
+ActionFrame.Position = UDim2.new(0, 14, 1, -52)
+ActionFrame.Size = UDim2.new(1, -28, 0, 38)
+
+local ApplyBtn = Instance.new("TextButton")
+ApplyBtn.Parent = ActionFrame
+ApplyBtn.BackgroundColor3 = Color3.fromRGB(0, 175, 100)
+ApplyBtn.Size = UDim2.new(0.33, -4, 1, 0)
+ApplyBtn.Font = Enum.Font.GothamBold
+ApplyBtn.Text = "⚡ Apply"
+ApplyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ApplyBtn.TextSize = 12
+
+local ApplyCorner = Instance.new("UICorner")
+ApplyCorner.CornerRadius = UDim.new(0, 6)
+ApplyCorner.Parent = ApplyBtn
+
+local SaveBtn = Instance.new("TextButton")
+SaveBtn.Parent = ActionFrame
+SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 122, 230)
+SaveBtn.Position = UDim2.new(0.33, 2, 0, 0)
+SaveBtn.Size = UDim2.new(0.33, -4, 1, 0)
+SaveBtn.Font = Enum.Font.GothamBold
+SaveBtn.Text = "💾 Save"
+SaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SaveBtn.TextSize = 12
+
+local SaveCorner = Instance.new("UICorner")
+SaveCorner.CornerRadius = UDim.new(0, 6)
+SaveCorner.Parent = SaveBtn
+
+local ResetBtn = Instance.new("TextButton")
+ResetBtn.Parent = ActionFrame
+ResetBtn.BackgroundColor3 = Color3.fromRGB(50, 52, 65)
+ResetBtn.Position = UDim2.new(0.66, 4, 0, 0)
+ResetBtn.Size = UDim2.new(0.34, -4, 1, 0)
+ResetBtn.Font = Enum.Font.GothamBold
+ResetBtn.Text = "🔄 Reset"
+ResetBtn.TextColor3 = Color3.fromRGB(220, 220, 230)
+ResetBtn.TextSize = 12
+
+local ResetCorner = Instance.new("UICorner")
+ResetCorner.CornerRadius = UDim.new(0, 6)
+ResetCorner.Parent = ResetBtn
+
+-- Save Modal
+local SaveModal = Instance.new("Frame")
+SaveModal.Parent = ScreenGui
+SaveModal.BackgroundColor3 = Color3.fromRGB(20, 22, 28)
+SaveModal.Position = UDim2.new(0.5, -130, 0.5, -65)
+SaveModal.Size = UDim2.new(0, 260, 0, 130)
+SaveModal.Visible = false
+SaveModal.ZIndex = 40
+
+local ModalCorner = Instance.new("UICorner")
+ModalCorner.CornerRadius = UDim.new(0, 8)
+ModalCorner.Parent = SaveModal
+
+local ModalTitle = Instance.new("TextLabel")
+ModalTitle.Parent = SaveModal
+ModalTitle.BackgroundTransparency = 1
+ModalTitle.Position = UDim2.new(0, 12, 0, 10)
+ModalTitle.Size = UDim2.new(1, -24, 0, 20)
+ModalTitle.Font = Enum.Font.GothamBold
+ModalTitle.Text = "Simpan Preset Baru"
+ModalTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ModalTitle.TextSize = 13
+
+local NameBox = Instance.new("TextBox")
+NameBox.Parent = SaveModal
+NameBox.BackgroundColor3 = Color3.fromRGB(12, 13, 17)
+NameBox.Position = UDim2.new(0, 12, 0, 38)
+NameBox.Size = UDim2.new(1, -24, 0, 32)
+NameBox.Font = Enum.Font.Gotham
+NameBox.PlaceholderText = "Contoh: Test123"
+NameBox.Text = ""
+NameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+NameBox.TextSize = 12
+
+local ConfirmSaveBtn = Instance.new("TextButton")
+ConfirmSaveBtn.Parent = SaveModal
+ConfirmSaveBtn.BackgroundColor3 = Color3.fromRGB(0, 132, 255)
+ConfirmSaveBtn.Position = UDim2.new(0, 12, 0, 82)
+ConfirmSaveBtn.Size = UDim2.new(0.5, -16, 0, 32)
+ConfirmSaveBtn.Font = Enum.Font.GothamBold
+ConfirmSaveBtn.Text = "Simpan"
+ConfirmSaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConfirmSaveBtn.TextSize = 12
+
+local CancelSaveBtn = Instance.new("TextButton")
+CancelSaveBtn.Parent = SaveModal
+CancelSaveBtn.BackgroundColor3 = Color3.fromRGB(50, 52, 65)
+CancelSaveBtn.Position = UDim2.new(0.5, 4, 0, 82)
+CancelSaveBtn.Size = UDim2.new(0.5, -16, 0, 32)
+CancelSaveBtn.Font = Enum.Font.GothamBold
+CancelSaveBtn.Text = "Batal"
+CancelSaveBtn.TextColor3 = Color3.fromRGB(200, 200, 215)
+CancelSaveBtn.TextSize = 12
+
+-- BUNDLE DATABASE
+local PremadeBundles = {
+    {Name = "Ninja Animation", Ids = {idle="656117400", walk="656121766", run="656118852", jump="656118341", swim="656122584", swimidle="656121111"}},
+    {Name = "Toy Animation", Ids = {idle="782841498", walk="782845627", run="782843869", jump="782842708", swim="782842708", swimidle="782842708"}},
+    {Name = "Cartoony Animation", Ids = {idle="742637544", walk="742638842", run="742638445", jump="742637942", swim="742637942", swimidle="742637942"}},
+    {Name = "Zombie Animation", Ids = {idle="616158929", walk="616168032", run="616163682", jump="616161997", swim="616161997", swimidle="616161997"}},
+    {Name = "Vampire Animation", Ids = {idle="1083445855", walk="1083452283", run="1083450166", jump="1083448332", swim="1083448332", swimidle="1083448332"}},
+    {Name = "Mage Animation", Ids = {idle="707742142", walk="707743833", run="707742934", jump="707742515", swim="707742515", swimidle="707742515"}},
+    {Name = "Levitation Animation", Ids = {idle="616006778", walk="616013216", run="616010382", jump="616008936", swim="616008936", swimidle="616008936"}},
+    {Name = "Old School Animation", Ids = {idle="531982821", walk="531984720", run="531983976", jump="531983196", swim="531983196", swimidle="531983196"}}
+}
+
+-- FE Single Animation Apply
+local function applySingleAnimation(key, rawId, showMsg)
+    local char = LocalPlayer.Character
+    if not char then return end
+    local animateScript = char:FindFirstChild("Animate")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not animateScript or not humanoid then return end
+
+    local cleanId = tostring(rawId):match("%d+")
+    if not cleanId then return end
+    local formattedId = "rbxassetid://" .. cleanId
+
+    local folder = animateScript:FindFirstChild(key)
+    if folder then
+        for _, anim in ipairs(folder:GetChildren()) do
+            if anim:IsA("Animation") then
+                anim.AnimationId = formattedId
+            end
+        end
+    end
+
+    local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
+    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+        track:Stop(0)
+    end
+    humanoid:ChangeState(Enum.HumanoidStateType.Landed)
+
+    if showMsg then
+        showToast("⚡ Gerakan " .. key:upper() .. " diganti!", true)
+    end
+end
+
+-- FE Full Animation Apply
+local function applyAnimations(ids, showMsg)
+    local char = LocalPlayer.Character
+    if not char then return false end
+    for key, val in pairs(ids) do
+        applySingleAnimation(key, val, false)
+    end
+    if showMsg then showToast("✨ Semua animasi diterapkan!", true) end
+    return true
+end
+
+-- Viewport Setup
+local previewModel
+local previewWorld = Instance.new("WorldModel")
+previewWorld.Parent = ViewportFrame
+
+local previewCam = Instance.new("Camera")
+previewCam.Parent = ViewportFrame
+ViewportFrame.CurrentCamera = previewCam
+
+local function setupViewportPreview(animId)
+    if previewModel then previewModel:Destroy() end
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    char.Archivable = true
+    previewModel = char:Clone()
+    char.Archivable = false
+    previewModel.Parent = previewWorld
+
+    local hrp = previewModel:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        previewCam.CFrame = CFrame.new(hrp.Position + hrp.CFrame.LookVector * 5.5 + Vector3.new(0, 0.5, 0), hrp.Position)
+    end
+
+    local hum = previewModel:FindFirstChildOfClass("Humanoid")
+    if hum and animId then
+        local animObj = Instance.new("Animation")
+        animObj.AnimationId = "rbxassetid://" .. animId
+        local track = hum:LoadAnimation(animObj)
+        track:Play()
+    end
+end
+
+-- Refresh Preset Folder View
+local function refreshFolderView()
+    for _, child in ipairs(FolderContainer:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextLabel") then 
+            child:Destroy() 
+        end
+    end
+
+    local presetCount = 0
+    for _ in pairs(SavedData.Presets) do
+        presetCount = presetCount + 1
+    end
+
+    if presetCount == 0 then
+        local EmptyText = Instance.new("TextLabel")
+        EmptyText.Parent = FolderContainer
+        EmptyText.BackgroundTransparency = 1
+        EmptyText.Position = UDim2.new(0, 0, 0, 40)
+        EmptyText.Size = UDim2.new(1, 0, 0, 40)
+        EmptyText.Font = Enum.Font.GothamMedium
+        EmptyText.Text = "📂 Belum ada preset tersimpan.\nBuat preset baru dari tab Editor!"
+        EmptyText.TextColor3 = Color3.fromRGB(130, 135, 150)
+        EmptyText.TextSize = 12
+        return
+    end
+
+    for presetName, ids in pairs(SavedData.Presets) do
+        local ItemFrame = Instance.new("Frame")
+        ItemFrame.Parent = FolderContainer
+        ItemFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 32)
+        ItemFrame.Size = UDim2.new(1, 0, 0, 46)
+
+        local ItemCorner = Instance.new("UICorner")
+        ItemCorner.CornerRadius = UDim.new(0, 6)
+        ItemCorner.Parent = ItemFrame
+
+        local ItemLabel = Instance.new("TextLabel")
+        ItemLabel.Parent = ItemFrame
+        ItemLabel.BackgroundTransparency = 1
+        ItemLabel.Position = UDim2.new(0, 14, 0, 0)
+        ItemLabel.Size = UDim2.new(0, 180, 1, 0)
+        ItemLabel.Fo
